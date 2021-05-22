@@ -8,20 +8,24 @@ from argparse import ArgumentParser
 def ip2int(ipaddr):
 	# Use octet range of 0 - 256 to multiply IP into a single integer
 	intIP = 0
+	# loop through each list item (octet)
 	for x in range(len(ipaddr)):
+		# for the first octet, just set the buffer intIP value
 		if x == 0:
 			intIP = int(ipaddr[x])
+		# for all but the first octet, multiply the current value by 256 and then add the next octet's value
 		else:
 			intIP = intIP * 256 + int(ipaddr[x])
 	
 	return intIP
 	
 def int2ip(intIP):
-  # struct.pack uses a ! symbol for network byte order, the I symbol specifies integer data
-  # struct.pack converts the integer IP 3,232,235,521 to b'\xc0\xa8\x00\x01'
-  # inet_ntoa pulls that byte IP representation and makes it a decimal-notation string
+	# struct.pack uses a ! symbol for network byte order, the I symbol specifies integer data
+  	# struct.pack converts the integer IP 3,232,235,521 to b'\xc0\xa8\x00\x01'
+	# inet_ntoa pulls that byte IP representation and makes it a decimal-notation string
 	return socket.inet_ntoa(struct.pack('!I', intIP))
 
+# A value-type agnostic function to check for numbers in strings and split them into a list for further processing
 def numCheck(num, sep=".", type="ip"):
 	tNum = num.split(sep)
 	nNum = []
@@ -47,6 +51,7 @@ def ipRange(start, end):
 	# Only proceed if the start is less than the end
 	if startInt < endInt:
 		for x in range(startInt, endInt + 1):
+			# add each IP as a new item in the ipList variable
 			ipList.insert(len(ipList), int2ip(x))
 	else:
 		exit("Ensure that the start IP is a lower value than the end IP.")
@@ -75,7 +80,7 @@ if args.dest is not None:
 	typeCount = 0
 	nIPs = []
 	
-	# Split the octets of the two IP range boundaries, check each octet, then generate the tuple of IPs in that range
+	# Detect the IP destination type based on a range-specifier: hypens, commas, or CIDR notation
 	if args.dest.find("-") > -1:
 		ipType = "hyphen"
 		typeCount = typeCount + 1
@@ -86,6 +91,7 @@ if args.dest is not None:
 		ipType = "cidr"
 		typeCount = typeCount + 1
 	
+	# Split the destination by the range type, hyphen, and then processess to find the list of IPs
 	if ipType == "hyphen" and typeCount == 1:
 		tIPs = args.dest.split('-')
 		ipStart = numCheck(tIPs[0])
@@ -104,11 +110,20 @@ if args.dest is not None:
 		tIPData = args.dest.split("/")
 		tCidr = int(tIPData[1])
 		tIPInt = ip2int(numCheck(tIPData[0]))
+		
+		# For the starting IP, get the network size by subtracting the CIDR from 32, then calculate 2 to the power of that value
+		# The start is then found by subtracting the found network size from the user-provided address; making sure to use the host ID
+		# Use the int2ip to convert the resulting IP back to a string, then numCheck to convert the string to a list of octets
+		# The list of octets is useful as the ipRange function uses the list of octets as its required format
 		ipStart = numCheck(int2ip(tIPInt - tIPInt % (2 ** (32 - tCidr))))
+		# For the end IP, perform the same steps, but add the network size to the found network start
 		ipEnd = numCheck(int2ip(ip2int(ipStart) + (2 ** (32 - tCidr)) - 1))
+		
+		# Use the range function to find all IPs from start to end
 		nIPs = ipRange(ipStart, ipEnd)
 	
 	if typeCount == 0:
+		# If there is no range, just convert the destination into a single-item list
 		nIPs.insert(len(nIPs), '.'.join([str(elem) for elem in numCheck(args.dest)]))
 	
 	if typeCount < 2:
