@@ -15,10 +15,13 @@ if __name__ == '__main__':
 		item = item.strip()
 		
 		# Check if it's an IPv4 address
-		reStr = "^((2[0-5][0-5]|1[0-9][0-9]|[1-9][0-9]|[1-9])(\.))((2[0-5][0-5]|1[0-9][0-9]|[1-9][0-9]|[0-9])(\.)){2}((2[0-5][0-5]|1[0-9][0-9]|[1-9][0-9]|[0-9])($))"
+		reStr = "^((2[0-5][0-5]|1[0-9][0-9]|[1-9][0-9]|[1-9](?=\.)|(?<=\.)[0-9])(\.|$)){4}"
+		ipv6regex = "^(([1-2a-fA-F][0-9a-fA-F]{0,3}(?=:)|:(?<=:)[0-9a-fA-F]{1,4}(?=:)){1,5}::((?<=:)[0-9a-fA-F]{1,4})(:|$)([0-9a-fA-F]{1,4}){0,6}|(^[1-9a-fA-F][0-9a-fA-F]{0,3}|:(?<=:)[0-9a-fA-F]{1,4}){8})$"
 		ipMatch = re.match(reStr, item)
 		if(ipMatch):
 			print("%s is an IPv4 Address" % (ipMatch.group()))
+		else:
+			print("%s is not an IPv4 Address" % (item))
 		
 		# Generate some IPs for testing
 		ipTesting = []
@@ -29,15 +32,31 @@ if __name__ == '__main__':
 			ipTesting.append(str(cIP))
 			cnt = cnt + 1
 		print("%d IPs generated..." % (cnt))
-			
-		# Check each one with REGEX and time it
+		
+		ip6Testing = []
+		cIP = "fcdf:abcd::0:1"
+		cnt = 0
+		while ipaddress.ip_address(cIP) < ipaddress.ip_address("fcdf:abcd::0:32fe"):
+			cIP = ipaddress.ip_address(cIP) + 1;
+			ip6Testing.append(str(cIP))
+			cnt = cnt + 1
+		print("%d v6 IPs generated..." % (cnt))
+		
+		# Check each IPv4 address with REGEX and time it
 		checkStart = time.time()
 		for cIp in ipTesting:
 			re.match(reStr, cIp)
 		checkEnd = time.time()
 		print("Regex testing took %.2f seconds" % (checkEnd - checkStart))
 		
-		# Check each one with the IP Address module and time it
+		# Check IPv6 with REGEX and time it
+		checkStart = time.time()
+		for cIp in ip6Testing:
+			re.match(ipv6regex, cIp)
+		checkEnd = time.time()
+		print("Regex IPv6 testing took %.2f seconds" % (checkEnd - checkStart))
+		
+		# Check each IPv4 address with the IP Address module and time it
 		checkStart = time.time()
 		for cIp in ipTesting:
 			try:
@@ -47,6 +66,17 @@ if __name__ == '__main__':
 				isIP = False
 		checkEnd = time.time()
 		print("IP Address Module testing took %.2f seconds" % (checkEnd - checkStart))
+		
+		# Check each IPv6 address with the IP Address module and time it
+		checkStart = time.time()
+		for cIp in ip6Testing:
+			try:
+				ipaddress.ip_address(cIP)
+				isIP = True
+			except:
+				isIP = False
+		checkEnd = time.time()
+		print("IP Address Module IPv6 testing took %.2f seconds" % (checkEnd - checkStart))
 		
 		# Check each one with splitting and comparisons and time it
 		checkStart = time.time()
@@ -63,12 +93,20 @@ if __name__ == '__main__':
 		print("String splitting testing took %.2f seconds" % (checkEnd - checkStart))
 		
 		ipv6Test = "fed4:1235::1"
-		print("\nThough, the IP Address module can tell that this is an IP: " + ipv6Test)
+		print("\nTest an address with the ipaddress module...")
 		try:
 			ipaddress.ip_address(ipv6Test)
-			print("Yep! Tested!")
+			print("%s is a valid IPv6 address." % (ipv6Test))
 		except:
 			print("Nope, wrong.")
+		
+		if re.match(ipv6regex, ipv6Test):
+			print("Regex says %s is a valid IPv6 address too." % (ipv6Test))
+		ipv6Test2 = "fed4:1235::34::1"
+		if re.match(ipv6regex, ipv6Test2):
+			print("But somehow %s is?" % (ipv6Test2))		
+		else:
+			print("But not? %s" % (ipv6Test2))		
 		
 		# Is it a valid DNS entry?
 		hIp = ""
